@@ -180,12 +180,16 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
   );
 }
 
-interface MetricChartCardProps {
+type MetricChartDatum =
+  | GitHubAnalytics['reposPerLanguageChart'][number]
+  | GitHubAnalytics['commitsPerRepoChart'][number];
+
+interface MetricChartCardProps<T extends MetricChartDatum> {
   title: string;
   description: string;
-  data: Array<Record<string, string | number>>;
-  dataKey: string;
-  nameKey: string;
+  data: T[];
+  dataKey: Extract<keyof T, string>;
+  nameKey: Extract<keyof T, string>;
   valueLabel: string;
   barColor: string;
   axisColor: string;
@@ -202,7 +206,7 @@ interface MetricChartCardProps {
   className?: string;
 }
 
-function MetricChartCard({
+function MetricChartCard<T extends MetricChartDatum>({
   title,
   description,
   data,
@@ -215,7 +219,7 @@ function MetricChartCard({
   tooltipStyle,
   tooltipItemStyle,
   className,
-}: MetricChartCardProps) {
+}: MetricChartCardProps<T>) {
   const usesTechnologyPalette = nameKey === 'language' || data.some((item) => 'language' in item);
 
   return (
@@ -250,11 +254,12 @@ function MetricChartCard({
               <Bar dataKey={dataKey} fill={barColor} radius={[0, 10, 10, 0]}>
                 {usesTechnologyPalette
                   ? data.map((item, index) => {
+                      const itemName = item[nameKey];
                       const technologyName =
-                        typeof item[nameKey] === 'string'
-                          ? String(item[nameKey])
+                        typeof itemName === 'string'
+                          ? itemName
                           : typeof item.language === 'string'
-                            ? String(item.language)
+                            ? item.language
                             : 'Unknown';
 
                       return (
