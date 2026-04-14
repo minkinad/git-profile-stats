@@ -3,4 +3,6 @@ dist
 .DS_Store
 .idea
 .vscode
-
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
