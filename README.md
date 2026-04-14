@@ -1,5 +1,11 @@
 # gitProfileStats
 
+![React](https://img.shields.io/badge/React-18-111111?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-111111?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-5-111111?logo=vite&logoColor=white)
+![Recharts](https://img.shields.io/badge/Recharts-Analytics-111111?logo=chartdotjs&logoColor=white)
+![GitHub Pages](https://img.shields.io/badge/Deploy-GitHub%20Pages-111111?logo=githubpages&logoColor=white)
+
 gitProfileStats is a minimalist GitHub analytics dashboard built with React, TypeScript, and Vite. Enter any public GitHub username to view profile details, repository insights, language distribution, top repositories by stars, and summary metrics in a clean monochrome interface.
 
 ## Overview
