@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { GitHubAnalytics } from '../types/github';
 import { getGitHubStyleColor } from '../utils/githubColors';
 import { formatDate, formatNumber } from '../utils/format';
@@ -7,18 +8,43 @@ interface RepoListProps {
 }
 
 export function RepoList({ analytics }: RepoListProps) {
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
+
+  const languages = Array.from(
+    new Set(analytics.repositories.map((repo) => repo.language))
+  ).sort();
+
+  const filteredRepos = selectedLanguage === 'all'
+    ? analytics.repositories
+    : analytics.repositories.filter((repo) => repo.language === selectedLanguage);
+
   return (
     <section className="repo-panel">
       <div className="panel-head">
         <span className="section-label">Repositories</span>
+        <div className="repo-filters">
+          <label htmlFor="language-filter">Filter by language:</label>
+          <select
+            id="language-filter"
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+          >
+            <option value="all">All languages</option>
+            {languages.map((lang) => (
+              <option key={lang} value={lang}>
+                {lang}
+              </option>
+            ))}
+          </select>
+        </div>
         <p>
-          {formatNumber(analytics.repositories.length)} public repositories, ordered by
+          {formatNumber(filteredRepos.length)} public repositories, ordered by
           most recently updated.
         </p>
       </div>
 
       <div className="repo-list">
-        {analytics.repositories.map((repo) => (
+        {filteredRepos.map((repo) => (
           <article className="repo-item" key={repo.id}>
             <div className="repo-main">
               <div className="repo-heading">

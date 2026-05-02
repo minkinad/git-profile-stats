@@ -540,9 +540,50 @@ input {
 .profile-topline,
 .panel-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+  flex-direction: column;
+}
+
+.repo-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.repo-filters select {
+  background: var(--input-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  color: var(--text-primary);
+  font-size: inherit;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.export-button {
+  background: var(--surface-deep);
+  color: var(--surface-deep-hover);
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.export-button:hover {
+  background: var(--surface-deep-hover);
+  color: var(--surface-deep);
 }
 
 .profile-topline a,

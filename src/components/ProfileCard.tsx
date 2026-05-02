@@ -1,5 +1,5 @@
 import { GitHubAnalytics, GitHubUser } from '../types/github';
-import { formatDate, formatExternalLink, formatNumber } from '../utils/format';
+import { downloadJSON, formatDate, formatExternalLink, formatNumber } from '../utils/format';
 
 interface ProfileCardProps {
   user: GitHubUser;
@@ -9,13 +9,27 @@ interface ProfileCardProps {
 export function ProfileCard({ user, analytics }: ProfileCardProps) {
   const blogUrl = formatExternalLink(user.blog);
 
+  const handleExport = () => {
+    const data = {
+      user,
+      analytics,
+      exportedAt: new Date().toISOString(),
+    };
+    downloadJSON(data, `${user.login}-github-stats.json`);
+  };
+
   return (
     <section className="profile-card">
       <div className="profile-topline">
         <span className="section-label">Profile</span>
-        <a href={user.html_url} target="_blank" rel="noreferrer">
-          View on GitHub
-        </a>
+        <div className="profile-actions">
+          <button type="button" onClick={handleExport} className="export-button">
+            Export JSON
+          </button>
+          <a href={user.html_url} target="_blank" rel="noreferrer">
+            View on GitHub
+          </a>
+        </div>
       </div>
 
       <div className="profile-body">
