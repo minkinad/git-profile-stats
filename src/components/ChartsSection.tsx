@@ -5,6 +5,8 @@ import {
   Cell,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -40,44 +42,32 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
 
   return (
     <section className="charts-grid">
-      <MetricChartCard
+      <PieChartCard
         title="Repos per Language"
         description="Repository count grouped by primary language."
         data={analytics.reposPerLanguageChart.slice(0, 10)}
         dataKey="value"
         nameKey="language"
-        valueLabel="Repos"
-        barColor={primaryBarColor}
-        axisColor={axisColor}
-        gridColor={gridColor}
         tooltipStyle={tooltipStyle}
         tooltipItemStyle={tooltipItemStyle}
       />
 
-      <MetricChartCard
+      <PieChartCard
         title="Stars per Language"
         description="Public stars aggregated by each repository's primary language."
         data={analytics.starsPerLanguageChart}
         dataKey="value"
         nameKey="language"
-        valueLabel="Stars"
-        barColor={secondaryBarColor}
-        axisColor={axisColor}
-        gridColor={gridColor}
         tooltipStyle={tooltipStyle}
         tooltipItemStyle={tooltipItemStyle}
       />
 
-      <MetricChartCard
+      <PieChartCard
         title="Commits per Language"
         description="Contributor commit totals aggregated from the top 10 starred repositories."
         data={analytics.commitsPerLanguageChart}
         dataKey="value"
         nameKey="language"
-        valueLabel="Commits"
-        barColor={tertiaryBarColor}
-        axisColor={axisColor}
-        gridColor={gridColor}
         tooltipStyle={tooltipStyle}
         tooltipItemStyle={tooltipItemStyle}
       />
@@ -183,6 +173,89 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
 type MetricChartDatum =
   | GitHubAnalytics['reposPerLanguageChart'][number]
   | GitHubAnalytics['commitsPerRepoChart'][number];
+
+interface PieChartCardProps<T extends MetricChartDatum> {
+  title: string;
+  description: string;
+  data: T[];
+  dataKey: Extract<keyof T, string>;
+  nameKey: Extract<keyof T, string>;
+  tooltipStyle: {
+    backgroundColor: string;
+    border: string;
+    borderRadius: string;
+    color: string;
+  };
+  tooltipItemStyle: {
+    color: string;
+  };
+}
+
+function PieChartCard<T extends MetricChartDatum>({
+  title,
+  description,
+  data,
+  dataKey,
+  nameKey,
+  tooltipStyle,
+  tooltipItemStyle,
+}: PieChartCardProps<T>) {
+  const usesTechnologyPalette = nameKey === 'language' || data.some((item) => 'language' in item);
+
+  return (
+    <article className="chart-card">
+      <div className="panel-head">
+        <span className="section-label">{title}</span>
+        <p>{description}</p>
+      </div>
+      {data.length > 0 ? (
+        <div className="chart-wrap chart-wrap-pie">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+              <Pie
+                data={data}
+                dataKey={dataKey}
+                nameKey={nameKey}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                label={({ name, value }) => `${name}: ${formatNumber(value)}`}
+              >
+                {usesTechnologyPalette
+                  ? data.map((item, index) => {
+                      const itemName = item[nameKey];
+                      const technologyName =
+                        typeof itemName === 'string'
+                          ? itemName
+                          : typeof item.language === 'string'
+                            ? item.language
+                            : 'Unknown';
+
+                      return (
+                        <Cell
+                          key={`${title}-${technologyName}-${index}`}
+                          fill={getGitHubStyleColor(technologyName)}
+                        />
+                      );
+                    })
+                  : null}
+              </Pie>
+              <Tooltip
+                formatter={(value: number) => formatNumber(value)}
+                contentStyle={tooltipStyle}
+                itemStyle={tooltipItemStyle}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <div className="chart-empty">
+          GitHub did not return enough public commit data for this chart.
+        </div>
+      )}
+    </article>
+  );
+}
 
 interface MetricChartCardProps<T extends MetricChartDatum> {
   title: string;
