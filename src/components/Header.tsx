@@ -19,7 +19,7 @@ export function Header({
           <Logo />
           <div>
             <span className="brand-name">gitProfileStats</span>
-            <p className="brand-tagline">Public GitHub analytics, reduced to signal.</p>
+            <p className="brand-tagline">Public GitHub analytics.</p>
           </div>
         </div>
       </a>

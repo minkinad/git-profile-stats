@@ -8,6 +8,7 @@ interface SearchFormProps {
   label?: string;
   buttonLabel?: string;
   inputId?: string;
+  hideLabel?: boolean;
 }
 
 export function SearchForm({
@@ -18,6 +19,7 @@ export function SearchForm({
   label = 'GitHub username',
   buttonLabel = 'Analyze',
   inputId = 'github-username',
+  hideLabel = false,
 }: SearchFormProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,7 +29,7 @@ export function SearchForm({
   return (
     <form className="search-form" onSubmit={handleSubmit}>
       <label className="search-label" htmlFor={inputId}>
-        {label}
+        <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
       </label>
       <div className="search-row">
         <input
@@ -35,7 +37,7 @@ export function SearchForm({
           className="search-input"
           type="text"
           autoComplete="off"
-          placeholder="e.g. torvalds"
+          placeholder="torvalds"
           value={username}
           onChange={(event) => onUsernameChange(event.target.value)}
           aria-label="GitHub username"

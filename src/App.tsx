@@ -167,8 +167,16 @@ export default function App() {
     void loadAnalysis(route.username);
   }, [route]);
 
-  function handleAnalyze() {
-    const trimmedUsername = username.trim();
+  function handleUsernameChange(value: string) {
+    setUsername(value);
+
+    if (errorMessage) {
+      setErrorMessage(null);
+    }
+  }
+
+  function handleAnalyzeFor(targetUsername: string) {
+    const trimmedUsername = targetUsername.trim();
 
     if (!trimmedUsername) {
       setErrorMessage('Enter a GitHub username to begin.');
@@ -184,6 +192,16 @@ export default function App() {
     }
 
     window.location.hash = getProfileHash(trimmedUsername);
+  }
+
+  function handleAnalyze() {
+    handleAnalyzeFor(username);
+  }
+
+  function handleExamplePick(exampleUsername: string) {
+    setUsername(exampleUsername);
+    setErrorMessage(null);
+    handleAnalyzeFor(exampleUsername);
   }
 
   function handleThemeToggle(event: MouseEvent<HTMLButtonElement>) {
@@ -240,22 +258,13 @@ export default function App() {
           <>
             <Hero
               username={username}
-              onUsernameChange={setUsername}
+              onUsernameChange={handleUsernameChange}
               onAnalyze={handleAnalyze}
+              onExamplePick={handleExamplePick}
               isLoading={isLoading}
+              statusMessage={statusMessage}
+              errorMessage={errorMessage}
             />
-
-            {errorMessage ? (
-              <section className="status-panel">
-                <span className="section-label">Status</span>
-                <div className="error-message">{errorMessage}</div>
-              </section>
-            ) : (
-              <section className="status-panel status-panel-muted">
-                <span className="section-label">Status</span>
-                <p>{statusMessage}</p>
-              </section>
-            )}
           </>
         ) : (
           <>

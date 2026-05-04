@@ -153,12 +153,12 @@ async function fetchRepoCommitTotal(
   );
 }
 
-async function fetchCommitTotalsForTopRepos(
+async function fetchCommitTotalsForAllRepos(
   username: string,
   repos: GitHubRepo[],
 ): Promise<Record<number, number>> {
   const results = await Promise.all(
-    getTopReposForCommitAnalytics(repos).map(async (repo) => {
+    repos.map(async (repo) => {
       try {
         const commitTotal = await fetchRepoCommitTotal(username, repo.name);
         return [repo.id, commitTotal] as const;
@@ -175,18 +175,6 @@ interface GitHubCommitActivityWeek {
   total: number;
   week: number;
   days: number[];
-}
-
-function getTopReposForCommitAnalytics(repos: GitHubRepo[]): GitHubRepo[] {
-  return [...repos]
-    .sort((left, right) => {
-      if (right.stargazers_count === left.stargazers_count) {
-        return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
-      }
-
-      return right.stargazers_count - left.stargazers_count;
-    })
-    .slice(0, 10);
 }
 
 function getMonthlyRangeExcludingCurrentMonth(): Date[] {
@@ -276,7 +264,7 @@ async function fetchMonthlyCommitSeries(
   );
 
   const commitActivityResults = await Promise.all(
-    getTopReposForCommitAnalytics(repos).map(async (repo) => {
+    repos.map(async (repo) => {
       try {
         return await fetchRepoCommitActivity(username, repo.name);
       } catch {
@@ -321,7 +309,7 @@ export async function analyzeGitHubUser(
   const user = await fetchUser(username);
   const repos = await fetchRepos(username, user.public_repos);
   const [commitTotalsByRepoId, monthlyCommitsChart] = await Promise.all([
-    fetchCommitTotalsForTopRepos(username, repos),
+    fetchCommitTotalsForAllRepos(username, repos),
     fetchMonthlyCommitSeries(username, repos),
   ]);
   const analytics = buildAnalytics(

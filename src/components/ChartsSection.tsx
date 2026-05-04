@@ -25,7 +25,6 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
   const axisColor = theme === 'dark' ? '#9e9e9e' : '#7a7a7a';
   const gridColor = theme === 'dark' ? '#2a2a2a' : '#e8e8e8';
   const summaryGridColor = theme === 'dark' ? '#262626' : '#ececec';
-  const primaryBarColor = theme === 'dark' ? '#f2f2f2' : '#111111';
   const secondaryBarColor = theme === 'dark' ? '#c8c8c8' : '#4d4d4d';
   const tertiaryBarColor = theme === 'dark' ? '#8c8c8c' : '#7d7d7d';
   const lineColor = theme === 'dark' ? '#f2f2f2' : '#111111';
@@ -58,16 +57,18 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
         data={analytics.starsPerLanguageChart}
         dataKey="value"
         nameKey="language"
+        valueLabel="Stars"
         tooltipStyle={tooltipStyle}
         tooltipItemStyle={tooltipItemStyle}
       />
 
       <PieChartCard
         title="Commits per Language"
-        description="Contributor commit totals aggregated from the top 10 starred repositories."
+        description="Contributor commit totals aggregated from all public repositories."
         data={analytics.commitsPerLanguageChart}
         dataKey="value"
         nameKey="language"
+        valueLabel="Commits"
         tooltipStyle={tooltipStyle}
         tooltipItemStyle={tooltipItemStyle}
       />
@@ -87,16 +88,13 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
         className="chart-card-wide"
       />
 
-      <MetricChartCard
+      <PieChartCard
         title="Stars per Repo"
         description="Top 10 public repositories ranked by stars."
         data={analytics.starsPerRepoChart}
         dataKey="value"
         nameKey="name"
         valueLabel="Stars"
-        barColor={primaryBarColor}
-        axisColor={axisColor}
-        gridColor={gridColor}
         tooltipStyle={tooltipStyle}
         tooltipItemStyle={tooltipItemStyle}
         className="chart-card-wide"
@@ -105,7 +103,7 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
       <article className="chart-card chart-card-wide">
         <div className="panel-head">
           <span className="section-label">Commits per Month</span>
-          <p>Last 12 full months through the previous month, aggregated from the top 10 starred repositories.</p>
+          <p>Last 12 full months through the previous month, aggregated from all public repositories.</p>
         </div>
         <div className="chart-wrap chart-wrap-line">
           <ResponsiveContainer width="100%" height="100%">
@@ -180,6 +178,7 @@ interface PieChartCardProps<T extends MetricChartDatum> {
   data: T[];
   dataKey: Extract<keyof T, string>;
   nameKey: Extract<keyof T, string>;
+  valueLabel?: string;
   tooltipStyle: {
     backgroundColor: string;
     border: string;
@@ -189,6 +188,7 @@ interface PieChartCardProps<T extends MetricChartDatum> {
   tooltipItemStyle: {
     color: string;
   };
+  className?: string;
 }
 
 function PieChartCard<T extends MetricChartDatum>({
@@ -197,13 +197,15 @@ function PieChartCard<T extends MetricChartDatum>({
   data,
   dataKey,
   nameKey,
+  valueLabel = 'Value',
   tooltipStyle,
   tooltipItemStyle,
+  className,
 }: PieChartCardProps<T>) {
   const usesTechnologyPalette = nameKey === 'language' || data.some((item) => 'language' in item);
 
   return (
-    <article className="chart-card">
+    <article className={className ? `chart-card ${className}` : 'chart-card'}>
       <div className="panel-head">
         <span className="section-label">{title}</span>
         <p>{description}</p>
@@ -241,7 +243,7 @@ function PieChartCard<T extends MetricChartDatum>({
                   : null}
               </Pie>
               <Tooltip
-                formatter={(value: number) => formatNumber(value)}
+                formatter={(value: number) => [formatNumber(value), valueLabel]}
                 contentStyle={tooltipStyle}
                 itemStyle={tooltipItemStyle}
               />
