@@ -16,6 +16,19 @@ import { GitHubAnalytics } from '../types/github';
 import { getGitHubStyleColor } from '../utils/githubColors';
 import { formatNumber } from '../utils/format';
 
+const repoSliceColors = [
+  '#111111',
+  '#2563eb',
+  '#dc2626',
+  '#059669',
+  '#d97706',
+  '#0891b2',
+  '#4f46e5',
+  '#ea580c',
+  '#475569',
+  '#be123c',
+];
+
 interface ChartsSectionProps {
   analytics: GitHubAnalytics;
   theme: 'light' | 'dark';
@@ -172,6 +185,20 @@ type MetricChartDatum =
   | GitHubAnalytics['reposPerLanguageChart'][number]
   | GitHubAnalytics['commitsPerRepoChart'][number];
 
+function getPieSliceColor<T extends MetricChartDatum>(
+  item: T,
+  index: number,
+  nameKey: Extract<keyof T, string>,
+): string {
+  const itemName = item[nameKey];
+
+  if (nameKey === 'language') {
+    return getGitHubStyleColor(typeof itemName === 'string' ? itemName : 'Unknown');
+  }
+
+  return repoSliceColors[index % repoSliceColors.length];
+}
+
 interface PieChartCardProps<T extends MetricChartDatum> {
   title: string;
   description: string;
@@ -202,8 +229,6 @@ function PieChartCard<T extends MetricChartDatum>({
   tooltipItemStyle,
   className,
 }: PieChartCardProps<T>) {
-  const usesTechnologyPalette = nameKey === 'language' || data.some((item) => 'language' in item);
-
   return (
     <article className={className ? `chart-card ${className}` : 'chart-card'}>
       <div className="panel-head">
@@ -211,45 +236,62 @@ function PieChartCard<T extends MetricChartDatum>({
         <p>{description}</p>
       </div>
       {data.length > 0 ? (
-        <div className="chart-wrap chart-wrap-pie">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-              <Pie
-                data={data}
-                dataKey={dataKey}
-                nameKey={nameKey}
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                label={({ name, value }) => `${name}: ${formatNumber(value)}`}
-              >
-                {usesTechnologyPalette
-                  ? data.map((item, index) => {
-                      const itemName = item[nameKey];
-                      const technologyName =
-                        typeof itemName === 'string'
-                          ? itemName
-                          : typeof item.language === 'string'
-                            ? item.language
-                            : 'Unknown';
+        <>
+          <div className="chart-wrap chart-wrap-pie">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                <Pie
+                  data={data}
+                  dataKey={dataKey}
+                  nameKey={nameKey}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  label={false}
+                >
+                  {data.map((item, index) => {
+                    const itemName = item[nameKey];
+                    const displayName =
+                      typeof itemName === 'string' ? itemName : `Item ${index + 1}`;
 
-                      return (
-                        <Cell
-                          key={`${title}-${technologyName}-${index}`}
-                          fill={getGitHubStyleColor(technologyName)}
-                        />
-                      );
-                    })
-                  : null}
-              </Pie>
-              <Tooltip
-                formatter={(value: number) => [formatNumber(value), valueLabel]}
-                contentStyle={tooltipStyle}
-                itemStyle={tooltipItemStyle}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+                    return (
+                      <Cell
+                        key={`${title}-${displayName}-${index}`}
+                        fill={getPieSliceColor(item, index, nameKey)}
+                      />
+                    );
+                  })}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => [formatNumber(value), valueLabel]}
+                  contentStyle={tooltipStyle}
+                  itemStyle={tooltipItemStyle}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="chart-legend" aria-label={`${title} legend`}>
+            {data.map((item, index) => {
+              const itemName = item[nameKey];
+              const itemValue = item[dataKey];
+              const displayName =
+                typeof itemName === 'string' ? itemName : `Item ${index + 1}`;
+              const displayValue =
+                typeof itemValue === 'number' ? formatNumber(itemValue) : String(itemValue);
+
+              return (
+                <span className="legend-item" key={`${title}-legend-${displayName}-${index}`}>
+                  <span
+                    className="legend-swatch"
+                    aria-hidden="true"
+                    style={{ backgroundColor: getPieSliceColor(item, index, nameKey) }}
+                  />
+                  <span>{`${displayName}: ${displayValue}`}</span>
+                </span>
+              );
+            })}
+          </div>
+        </>
       ) : (
         <div className="chart-empty">
           GitHub did not return enough public commit data for this chart.
