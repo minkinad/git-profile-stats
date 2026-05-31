@@ -84,6 +84,7 @@ export interface GitHubAnalytics {
 
 export type GitHubApiErrorCode =
   | 'empty_input'
+  | 'invalid_input'
   | 'not_found'
   | 'rate_limit'
   | 'network'

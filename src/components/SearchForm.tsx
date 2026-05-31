@@ -35,6 +35,8 @@ export function SearchForm({
           className="search-input"
           type="text"
           autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
           placeholder="e.g. torvalds"
           value={username}
           onChange={(event) => onUsernameChange(event.target.value)}

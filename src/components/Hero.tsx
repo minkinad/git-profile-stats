@@ -22,6 +22,11 @@ export function Hero({
           gitProfileStats turns usernames into a calm, monochrome snapshot of profile data,
           repository health, language mix, and standout projects.
         </p>
+        <div className="hero-highlights" aria-label="Product highlights">
+          <span>Session cache for repeat views</span>
+          <span>Shareable profile URL</span>
+          <span>Exportable JSON snapshot</span>
+        </div>
       </div>
       <div className="hero-panel">
         <SearchForm

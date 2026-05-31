@@ -63,8 +63,8 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
       />
 
       <PieChartCard
-        title="Commits per Language"
-        description="Contributor commit totals aggregated from the top 10 starred repositories."
+        title="Recent Commits per Language"
+        description="Last-year commit activity aggregated from the top starred repositories GitHub can expose."
         data={analytics.commitsPerLanguageChart}
         dataKey="value"
         nameKey="language"
@@ -73,8 +73,8 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
       />
 
       <MetricChartCard
-        title="Commits per Repo"
-        description="Top 10 repositories by available contributor commit totals."
+        title="Recent Commits per Repo"
+        description="Top repositories by available last-year commit activity."
         data={analytics.commitsPerRepoChart}
         dataKey="value"
         nameKey="name"
@@ -105,7 +105,7 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
       <article className="chart-card chart-card-wide">
         <div className="panel-head">
           <span className="section-label">Commits per Month</span>
-          <p>Last 12 full months through the previous month, aggregated from the top 10 starred repositories.</p>
+          <p>Last 12 full months through the previous month, aggregated from top starred repositories.</p>
         </div>
         <div className="chart-wrap chart-wrap-line">
           <ResponsiveContainer width="100%" height="100%">

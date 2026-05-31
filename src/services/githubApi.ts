@@ -9,6 +9,11 @@ import {
 
 const API_BASE_URL = 'https://api.github.com';
 const apiToken = import.meta.env.VITE_GITHUB_TOKEN;
+const ANALYSIS_CACHE_PREFIX = 'gitProfileStats-analysis:';
+const ANALYSIS_CACHE_TTL_MS = 10 * 60 * 1000;
+const MAX_REPOS_FOR_DEEP_ANALYTICS = 8;
+const MAX_PARALLEL_REQUESTS = 4;
+const GITHUB_USERNAME_PATTERN = /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i;
 
 export class GitHubApiError extends Error {
   code: GitHubApiErrorCode;
@@ -41,6 +46,52 @@ function buildHeaders(): Record<string, string> {
   return headers;
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
+function getCacheKey(username: string): string {
+  return `${ANALYSIS_CACHE_PREFIX}${username.toLowerCase()}`;
+}
+
+function readCachedAnalysis(username: string): GitHubAnalysisResult | null {
+  try {
+    const cached = window.sessionStorage.getItem(getCacheKey(username));
+
+    if (!cached) {
+      return null;
+    }
+
+    const parsed = JSON.parse(cached) as {
+      createdAt: number;
+      value: GitHubAnalysisResult;
+    };
+
+    if (!parsed.createdAt || Date.now() - parsed.createdAt > ANALYSIS_CACHE_TTL_MS) {
+      window.sessionStorage.removeItem(getCacheKey(username));
+      return null;
+    }
+
+    return parsed.value;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedAnalysis(username: string, value: GitHubAnalysisResult): void {
+  try {
+    window.sessionStorage.setItem(
+      getCacheKey(username),
+      JSON.stringify({
+        createdAt: Date.now(),
+        value,
+      }),
+    );
+  } catch {
+    // Storage can be unavailable in private browsing or full quota states.
+  }
+}
+
 function parseRateLimitReset(value: string | null): string | undefined {
   if (!value) {
     return undefined;
@@ -57,14 +108,19 @@ function parseRateLimitReset(value: string | null): string | undefined {
   });
 }
 
-async function fetchFromGitHub<T>(path: string): Promise<T> {
+async function fetchFromGitHub<T>(path: string, signal?: AbortSignal): Promise<T> {
   let response: Response;
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       headers: buildHeaders(),
+      signal,
     });
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+
     throw new GitHubApiError(
       'Network error while reaching GitHub.',
       'network',
@@ -95,12 +151,17 @@ async function fetchFromGitHub<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function fetchGitHubResponse(path: string): Promise<Response> {
+async function fetchGitHubResponse(path: string, signal?: AbortSignal): Promise<Response> {
   try {
     return await fetch(`${API_BASE_URL}${path}`, {
       headers: buildHeaders(),
+      signal,
     });
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+
     throw new GitHubApiError(
       'Network error while reaching GitHub.',
       'network',
@@ -108,67 +169,56 @@ async function fetchGitHubResponse(path: string): Promise<Response> {
   }
 }
 
-async function fetchUser(username: string): Promise<GitHubUser> {
-  return fetchFromGitHub<GitHubUser>(`/users/${encodeURIComponent(username)}`);
+async function fetchUser(username: string, signal?: AbortSignal): Promise<GitHubUser> {
+  return fetchFromGitHub<GitHubUser>(`/users/${encodeURIComponent(username)}`, signal);
 }
 
-async function fetchRepos(username: string, publicRepoCount: number): Promise<GitHubRepo[]> {
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker()),
+  );
+
+  return results;
+}
+
+async function fetchRepos(
+  username: string,
+  publicRepoCount: number,
+  signal?: AbortSignal,
+): Promise<GitHubRepo[]> {
   if (publicRepoCount === 0) {
     return [];
   }
 
   const pages = Math.ceil(publicRepoCount / 100);
-  const repositories: GitHubRepo[] = [];
-
-  for (let page = 1; page <= pages; page += 1) {
-    const pageRepositories = await fetchFromGitHub<GitHubRepo[]>(
+  const pageNumbers = Array.from({ length: pages }, (_, index) => index + 1);
+  const repoPages = await mapWithConcurrency(
+    pageNumbers,
+    MAX_PARALLEL_REQUESTS,
+    (page) => fetchFromGitHub<GitHubRepo[]>(
       `/users/${encodeURIComponent(
         username,
       )}/repos?per_page=100&page=${page}&sort=updated`,
-    );
-
-    repositories.push(...pageRepositories);
-  }
-
-  return repositories;
-}
-
-interface GitHubContributor {
-  contributions: number;
-}
-
-async function fetchRepoCommitTotal(
-  username: string,
-  repoName: string,
-): Promise<number> {
-  const contributors = await fetchFromGitHub<GitHubContributor[]>(
-    `/repos/${encodeURIComponent(username)}/${encodeURIComponent(
-      repoName,
-    )}/contributors?per_page=100&anon=1`,
+      signal,
+    ),
   );
 
-  return contributors.reduce(
-    (total, contributor) => total + contributor.contributions,
-    0,
-  );
-}
-
-async function fetchCommitTotalsForTopRepos(
-  username: string,
-  repos: GitHubRepo[],
-): Promise<Record<number, number>> {
-  const results = await Promise.all(
-    getTopReposForCommitAnalytics(repos).map(async (repo) => {
-      try {
-        const commitTotal = await fetchRepoCommitTotal(username, repo.name);
-        return [repo.id, commitTotal] as const;
-      } catch {
-        return [repo.id, 0] as const;
-      }
-    }),
-  );
-
-  return Object.fromEntries(results);
+  return repoPages.flat();
 }
 
 interface GitHubCommitActivityWeek {
@@ -186,7 +236,7 @@ function getTopReposForCommitAnalytics(repos: GitHubRepo[]): GitHubRepo[] {
 
       return right.stargazers_count - left.stargazers_count;
     })
-    .slice(0, 10);
+    .slice(0, MAX_REPOS_FOR_DEEP_ANALYTICS);
 }
 
 function getMonthlyRangeExcludingCurrentMonth(): Date[] {
@@ -215,12 +265,14 @@ function formatMonthLabel(date: Date): string {
 async function fetchRepoCommitActivity(
   username: string,
   repoName: string,
+  signal?: AbortSignal,
   attempt = 0,
 ): Promise<GitHubCommitActivityWeek[]> {
   const response = await fetchGitHubResponse(
     `/repos/${encodeURIComponent(username)}/${encodeURIComponent(
       repoName,
     )}/stats/commit_activity`,
+    signal,
   );
 
   if (response.status === 202) {
@@ -229,7 +281,7 @@ async function fetchRepoCommitActivity(
     }
 
     await new Promise((resolve) => window.setTimeout(resolve, 700));
-    return fetchRepoCommitActivity(username, repoName, attempt + 1);
+    return fetchRepoCommitActivity(username, repoName, signal, attempt + 1);
   }
 
   if (response.status === 204) {
@@ -260,10 +312,45 @@ async function fetchRepoCommitActivity(
   return (await response.json()) as GitHubCommitActivityWeek[];
 }
 
-async function fetchMonthlyCommitSeries(
+async function fetchCommitActivityForTopRepos(
   username: string,
   repos: GitHubRepo[],
-): Promise<MonthlyCommitPoint[]> {
+  signal?: AbortSignal,
+): Promise<Record<number, GitHubCommitActivityWeek[]>> {
+  const results = await mapWithConcurrency(
+    getTopReposForCommitAnalytics(repos),
+    MAX_PARALLEL_REQUESTS,
+    async (repo) => {
+      try {
+        const activity = await fetchRepoCommitActivity(username, repo.name, signal);
+        return [repo.id, activity] as const;
+      } catch (error) {
+        if (isAbortError(error)) {
+          throw error;
+        }
+
+        return [repo.id, []] as const;
+      }
+    },
+  );
+
+  return Object.fromEntries(results);
+}
+
+function buildCommitTotalsByRepoId(
+  commitActivityByRepoId: Record<number, GitHubCommitActivityWeek[]>,
+): Record<number, number> {
+  return Object.fromEntries(
+    Object.entries(commitActivityByRepoId).map(([repoId, weeks]) => [
+      Number(repoId),
+      weeks.reduce((total, week) => total + week.total, 0),
+    ]),
+  );
+}
+
+function buildMonthlyCommitSeries(
+  commitActivityByRepoId: Record<number, GitHubCommitActivityWeek[]>,
+): MonthlyCommitPoint[] {
   const months = getMonthlyRangeExcludingCurrentMonth();
   const monthMap = new Map<string, MonthlyCommitPoint>(
     months.map((monthDate) => [
@@ -275,17 +362,7 @@ async function fetchMonthlyCommitSeries(
     ]),
   );
 
-  const commitActivityResults = await Promise.all(
-    getTopReposForCommitAnalytics(repos).map(async (repo) => {
-      try {
-        return await fetchRepoCommitActivity(username, repo.name);
-      } catch {
-        return [];
-      }
-    }),
-  );
-
-  for (const repoWeeks of commitActivityResults) {
+  for (const repoWeeks of Object.values(commitActivityByRepoId)) {
     for (const week of repoWeeks) {
       week.days.forEach((count, index) => {
         if (!count) {
@@ -308,6 +385,7 @@ async function fetchMonthlyCommitSeries(
 
 export async function analyzeGitHubUser(
   rawUsername: string,
+  signal?: AbortSignal,
 ): Promise<GitHubAnalysisResult> {
   const username = rawUsername.trim();
 
@@ -318,22 +396,41 @@ export async function analyzeGitHubUser(
     );
   }
 
-  const user = await fetchUser(username);
-  const repos = await fetchRepos(username, user.public_repos);
-  const [commitTotalsByRepoId, monthlyCommitsChart] = await Promise.all([
-    fetchCommitTotalsForTopRepos(username, repos),
-    fetchMonthlyCommitSeries(username, repos),
-  ]);
+  if (!GITHUB_USERNAME_PATTERN.test(username)) {
+    throw new GitHubApiError(
+      'Please enter a valid GitHub username.',
+      'invalid_input',
+    );
+  }
+
+  const cachedAnalysis = readCachedAnalysis(username);
+
+  if (cachedAnalysis) {
+    return cachedAnalysis;
+  }
+
+  const user = await fetchUser(username, signal);
+  const repos = await fetchRepos(username, user.public_repos, signal);
+  const commitActivityByRepoId = await fetchCommitActivityForTopRepos(
+    username,
+    repos,
+    signal,
+  );
+  const commitTotalsByRepoId = buildCommitTotalsByRepoId(commitActivityByRepoId);
+  const monthlyCommitsChart = buildMonthlyCommitSeries(commitActivityByRepoId);
   const analytics = buildAnalytics(
     user,
     repos,
     commitTotalsByRepoId,
     monthlyCommitsChart,
   );
-
-  return {
+  const result = {
     user,
     repos,
     analytics,
   };
+
+  writeCachedAnalysis(username, result);
+
+  return result;
 }

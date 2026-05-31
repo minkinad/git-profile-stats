@@ -1,13 +1,27 @@
-import { CSSProperties, MouseEvent, useEffect, useRef, useState } from 'react';
-import { ChartsSection } from './components/ChartsSection';
+import {
+  CSSProperties,
+  MouseEvent,
+  Suspense,
+  lazy,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { ProfileCard } from './components/ProfileCard';
 import { RepoList } from './components/RepoList';
+import { SearchForm } from './components/SearchForm';
 import { StatsGrid } from './components/StatsGrid';
 import { analyzeGitHubUser, GitHubApiError } from './services/githubApi';
 import { GitHubAnalysisResult } from './types/github';
+
+const ChartsSection = lazy(() =>
+  import('./components/ChartsSection').then((module) => ({
+    default: module.ChartsSection,
+  })),
+);
 
 const initialMessage =
   'Search for a public GitHub username to see profile data, repository insights, and language analytics.';
@@ -51,6 +65,8 @@ function getErrorMessage(error: unknown): string {
     switch (error.code) {
       case 'empty_input':
         return 'Enter a GitHub username to begin.';
+      case 'invalid_input':
+        return 'Use a valid GitHub username: letters, numbers, or hyphens, up to 39 characters.';
       case 'not_found':
         return 'No public GitHub user was found for that username.';
       case 'rate_limit':
@@ -65,6 +81,32 @@ function getErrorMessage(error: unknown): string {
   }
 
   return 'Something unexpected happened while analyzing this profile.';
+}
+
+function normalizeUsernameInput(value: string): string {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return '';
+  }
+
+  const withoutAtSign = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
+
+  try {
+    const url = new URL(
+      withoutAtSign.startsWith('github.com/')
+        ? `https://${withoutAtSign}`
+        : withoutAtSign,
+    );
+
+    if (url.hostname === 'github.com' || url.hostname === 'www.github.com') {
+      return url.pathname.split('/').filter(Boolean)[0] ?? '';
+    }
+  } catch {
+    // Plain usernames are expected to fall through.
+  }
+
+  return withoutAtSign;
 }
 
 export default function App() {
@@ -90,6 +132,7 @@ export default function App() {
   const [themeWave, setThemeWave] = useState<ThemeWaveState | null>(null);
   const [isThemeAnimating, setIsThemeAnimating] = useState(false);
   const requestIdRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const themeWaveTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -102,6 +145,8 @@ export default function App() {
       if (themeWaveTimeoutRef.current) {
         window.clearTimeout(themeWaveTimeoutRef.current);
       }
+
+      abortControllerRef.current?.abort();
     };
   }, []);
 
@@ -121,6 +166,7 @@ export default function App() {
     }
 
     requestIdRef.current += 1;
+    abortControllerRef.current?.abort();
     setAnalysis(null);
     setErrorMessage(null);
     setIsLoading(false);
@@ -129,14 +175,21 @@ export default function App() {
 
   async function loadAnalysis(targetUsername: string) {
     const requestId = requestIdRef.current + 1;
+    const abortController = new AbortController();
+
     requestIdRef.current = requestId;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = abortController;
     setIsLoading(true);
     setAnalysis(null);
     setErrorMessage(null);
-    setStatusMessage('Fetching profile and repository data from GitHub...');
+    setStatusMessage('Fetching profile, repositories, and activity from GitHub...');
 
     try {
-      const nextAnalysis = await analyzeGitHubUser(targetUsername);
+      const nextAnalysis = await analyzeGitHubUser(
+        targetUsername,
+        abortController.signal,
+      );
 
       if (requestId !== requestIdRef.current) {
         return;
@@ -145,6 +198,10 @@ export default function App() {
       setAnalysis(nextAnalysis);
       setStatusMessage(`Analysis ready for @${nextAnalysis.user.login}.`);
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+
       if (requestId !== requestIdRef.current) {
         return;
       }
@@ -155,6 +212,7 @@ export default function App() {
     } finally {
       if (requestId === requestIdRef.current) {
         setIsLoading(false);
+        abortControllerRef.current = null;
       }
     }
   }
@@ -168,7 +226,7 @@ export default function App() {
   }, [route]);
 
   function handleAnalyze() {
-    const trimmedUsername = username.trim();
+    const trimmedUsername = normalizeUsernameInput(username);
 
     if (!trimmedUsername) {
       setErrorMessage('Enter a GitHub username to begin.');
@@ -177,6 +235,7 @@ export default function App() {
     }
 
     setErrorMessage(null);
+    setUsername(trimmedUsername);
 
     if (route.page === 'profile' && route.username === trimmedUsername) {
       void loadAnalysis(trimmedUsername);
@@ -259,6 +318,22 @@ export default function App() {
           </>
         ) : (
           <>
+            <section className="results-toolbar">
+              <div>
+                <span className="section-label">Dashboard</span>
+                <p>{statusMessage}</p>
+              </div>
+              <SearchForm
+                username={username}
+                onUsernameChange={setUsername}
+                onSubmit={handleAnalyze}
+                isLoading={isLoading}
+                label="Analyze another profile"
+                buttonLabel="Analyze"
+                inputId="profile-github-username"
+              />
+            </section>
+
             {isLoading ? (
               <section className="loading-grid" aria-live="polite">
                 <div className="panel skeleton tall" />
@@ -278,7 +353,15 @@ export default function App() {
               <div className="results-stack">
                 <ProfileCard user={analysis.user} analytics={analysis.analytics} />
                 <StatsGrid user={analysis.user} analytics={analysis.analytics} />
-                <ChartsSection analytics={analysis.analytics} theme={theme} />
+                <Suspense
+                  fallback={
+                    <section className="chart-loading" aria-live="polite">
+                      <div className="panel skeleton" />
+                    </section>
+                  }
+                >
+                  <ChartsSection analytics={analysis.analytics} theme={theme} />
+                </Suspense>
                 <RepoList analytics={analysis.analytics} />
               </div>
             ) : null}
