@@ -8,6 +8,16 @@
 
 gitProfileStats is a minimalist GitHub analytics dashboard built with React, TypeScript, and Vite. Enter any public GitHub username to view profile details, repository insights, language distribution, top repositories by stars, and summary metrics in a clean monochrome interface.
 
+## Screenshots
+
+### Search
+
+![gitProfileStats search screen](docs/screenshots/home.png)
+
+### Analytics dashboard
+
+![gitProfileStats analytics dashboard](docs/screenshots/dashboard.png)
+
 ## Overview
 
 gitProfileStats fetches public GitHub user data and repository data directly from the GitHub REST API, then computes useful analytics such as:
