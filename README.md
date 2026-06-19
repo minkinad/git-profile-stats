@@ -13,11 +13,14 @@ gitProfileStats is a minimalist GitHub analytics dashboard built with React, Typ
 gitProfileStats fetches public GitHub user data and repository data directly from the GitHub REST API, then computes useful analytics such as:
 
 - Total stars across public repositories
+- Total forks and open issues
 - Average stars per repository
+- Original, forked, and archived repository counts
 - Most used language
 - Most recently updated repository
 - Most starred repositories
 - Language distribution
+- 52-week commit activity for a bounded sample of top repositories
 
 The design stays intentionally black, white, and grayscale for a premium product-style dashboard feel.
 
@@ -104,6 +107,12 @@ Create a production build with:
 npm run build
 ```
 
+Run the analytics test suite with:
+
+```bash
+npm test
+```
+
 Preview the production build locally:
 
 ```bash
@@ -161,6 +170,7 @@ This environment variable is optional and is only used client-side at build/runt
 ## Scripts
 
 - `npm run dev` - start the local development server
+- `npm test` - run analytics unit tests
 - `npm run build` - create the production build
 - `npm run preview` - preview the production build
 - `npm run deploy` - build and publish to GitHub Pages using `gh-pages`
@@ -168,5 +178,6 @@ This environment variable is optional and is only used client-side at build/runt
 ## Notes
 
 - The app uses a relative Vite base path so it can be deployed cleanly to GitHub Pages without hardcoding a repository name.
-- All analytics are derived from public repositories returned by the GitHub API.
+- Repository totals are derived from all public repositories returned by the GitHub API.
+- Commit charts use GitHub's 52-week activity endpoint for up to eight top-starred repositories to control API usage; the dashboard reports this sample size explicitly.
 - Repositories with no detected language are grouped under `Unknown`.
