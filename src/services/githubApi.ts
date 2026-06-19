@@ -9,7 +9,7 @@ import {
 
 const API_BASE_URL = 'https://api.github.com';
 const apiToken = import.meta.env.VITE_GITHUB_TOKEN;
-const ANALYSIS_CACHE_PREFIX = 'gitProfileStats-analysis:';
+const ANALYSIS_CACHE_PREFIX = 'gitProfileStats-analysis:v2:';
 const ANALYSIS_CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_REPOS_FOR_DEEP_ANALYTICS = 8;
 const MAX_PARALLEL_REQUESTS = 4;

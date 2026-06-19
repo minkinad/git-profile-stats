@@ -21,7 +21,10 @@ function mapRepo(repo: GitHubRepo): RepoInsight {
     url: repo.html_url,
     stars: repo.stargazers_count,
     forks: repo.forks_count,
+    openIssues: repo.open_issues_count,
     language: normalizeLanguage(repo.language),
+    isFork: repo.fork,
+    isArchived: repo.archived,
     updatedAt: repo.updated_at,
   };
 }
@@ -40,6 +43,16 @@ export function buildAnalytics(
     );
 
   const totalStars = repositories.reduce((sum, repo) => sum + repo.stars, 0);
+  const totalForks = repositories.reduce((sum, repo) => sum + repo.forks, 0);
+  const totalOpenIssues = repositories.reduce((sum, repo) => sum + repo.openIssues, 0);
+  const totalRecentCommits = Object.values(commitTotalsByRepoId).reduce(
+    (sum, commits) => sum + commits,
+    0,
+  );
+  const originalRepositoryCount = repositories.filter((repo) => !repo.isFork).length;
+  const forkedRepositoryCount = repositories.length - originalRepositoryCount;
+  const archivedRepositoryCount = repositories.filter((repo) => repo.isArchived).length;
+  const commitAnalyticsRepoCount = Object.keys(commitTotalsByRepoId).length;
   const averageStarsPerRepo =
     repositories.length > 0 ? totalStars / repositories.length : 0;
 
@@ -72,7 +85,11 @@ export function buildAnalytics(
     return right.count - left.count;
   });
 
-  const mostUsedLanguage = languageDistribution[0]?.language ?? 'None';
+  const knownLanguages = languageDistribution.filter(
+    (item) => item.language !== 'Unknown',
+  );
+  const languageCount = knownLanguages.length;
+  const mostUsedLanguage = knownLanguages[0]?.language ?? 'None';
   const mostRecentlyUpdatedRepo = repositories[0] ?? null;
   const mostStarredRepos = [...repositories]
     .sort((left, right) => {
@@ -86,10 +103,18 @@ export function buildAnalytics(
 
   const summaryMetrics = [
     { label: 'Public Repos', value: user.public_repos },
-    { label: 'Followers', value: user.followers },
-    { label: 'Following', value: user.following },
+    { label: 'Original Repos', value: originalRepositoryCount },
     { label: 'Total Stars', value: totalStars },
-    { label: 'Avg Stars', value: Number(averageStarsPerRepo.toFixed(1)) },
+    { label: 'Total Forks', value: totalForks },
+    { label: 'Open Issues', value: totalOpenIssues },
+    { label: 'Languages', value: languageCount },
+    { label: 'Commits (52w)', value: totalRecentCommits },
+    { label: 'Repos Sampled', value: commitAnalyticsRepoCount },
+    {
+      label: 'Avg Stars / Repo',
+      value: Number(averageStarsPerRepo.toFixed(1)),
+      format: 'decimal' as const,
+    },
   ];
 
   const reposPerLanguageChart: LanguageMetricPoint[] = languageDistribution.map((item) => ({
@@ -136,6 +161,14 @@ export function buildAnalytics(
   return {
     repositories,
     totalStars,
+    totalForks,
+    totalOpenIssues,
+    totalRecentCommits,
+    originalRepositoryCount,
+    forkedRepositoryCount,
+    archivedRepositoryCount,
+    languageCount,
+    commitAnalyticsRepoCount,
     averageStarsPerRepo,
     mostUsedLanguage,
     mostRecentlyUpdatedRepo,

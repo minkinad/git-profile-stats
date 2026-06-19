@@ -21,7 +21,10 @@ export interface GitHubRepo {
   description: string | null;
   stargazers_count: number;
   forks_count: number;
+  open_issues_count: number;
   language: string | null;
+  fork: boolean;
+  archived: boolean;
   updated_at: string;
 }
 
@@ -40,13 +43,17 @@ export interface RepoInsight {
   url: string;
   stars: number;
   forks: number;
+  openIssues: number;
   language: string;
+  isFork: boolean;
+  isArchived: boolean;
   updatedAt: string;
 }
 
 export interface SummaryMetric {
   label: string;
   value: number;
+  format?: 'number' | 'decimal';
 }
 
 export interface LanguageMetricPoint {
@@ -68,6 +75,14 @@ export interface MonthlyCommitPoint {
 export interface GitHubAnalytics {
   repositories: RepoInsight[];
   totalStars: number;
+  totalForks: number;
+  totalOpenIssues: number;
+  totalRecentCommits: number;
+  originalRepositoryCount: number;
+  forkedRepositoryCount: number;
+  archivedRepositoryCount: number;
+  languageCount: number;
+  commitAnalyticsRepoCount: number;
   averageStarsPerRepo: number;
   mostUsedLanguage: string;
   mostRecentlyUpdatedRepo: RepoInsight | null;
