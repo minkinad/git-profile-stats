@@ -12,9 +12,19 @@ export function StatsGrid({ user, analytics }: StatsGridProps) {
     { label: 'Followers', value: formatNumber(user.followers) },
     { label: 'Following', value: formatNumber(user.following) },
     { label: 'Total Stars', value: formatNumber(analytics.totalStars) },
+    { label: 'Total Forks', value: formatNumber(analytics.totalForks) },
+    { label: 'Open Issues', value: formatNumber(analytics.totalOpenIssues) },
     {
       label: 'Average Stars / Repo',
       value: formatDecimal(analytics.averageStarsPerRepo),
+    },
+    {
+      label: 'Original / Forked Repos',
+      value: `${formatNumber(analytics.originalRepositoryCount)} / ${formatNumber(analytics.forkedRepositoryCount)}`,
+    },
+    {
+      label: 'Commits, last 52 weeks (sampled)',
+      value: formatNumber(analytics.totalRecentCommits),
     },
     { label: 'Most Used Language', value: analytics.mostUsedLanguage },
     {

@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import { GitHubAnalytics } from '../types/github';
 import { getGitHubStyleColor } from '../utils/githubColors';
-import { formatNumber } from '../utils/format';
+import { formatDecimal, formatNumber } from '../utils/format';
 
 interface ChartsSectionProps {
   analytics: GitHubAnalytics;
@@ -24,9 +24,7 @@ interface ChartsSectionProps {
 export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
   const axisColor = theme === 'dark' ? '#9e9e9e' : '#7a7a7a';
   const gridColor = theme === 'dark' ? '#2a2a2a' : '#e8e8e8';
-  const summaryGridColor = theme === 'dark' ? '#262626' : '#ececec';
   const primaryBarColor = theme === 'dark' ? '#f2f2f2' : '#111111';
-  const secondaryBarColor = theme === 'dark' ? '#c8c8c8' : '#4d4d4d';
   const tertiaryBarColor = theme === 'dark' ? '#8c8c8c' : '#7d7d7d';
   const lineColor = theme === 'dark' ? '#f2f2f2' : '#111111';
   const lineDotColor = theme === 'dark' ? '#090909' : '#ffffff';
@@ -63,8 +61,8 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
       />
 
       <PieChartCard
-        title="Recent Commits per Language"
-        description="Last-year commit activity aggregated from the top starred repositories GitHub can expose."
+        title="Commits (52w) per Language"
+        description={`GitHub's 52-week activity across ${formatNumber(analytics.commitAnalyticsRepoCount)} sampled repositories.`}
         data={analytics.commitsPerLanguageChart}
         dataKey="value"
         nameKey="language"
@@ -73,8 +71,8 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
       />
 
       <MetricChartCard
-        title="Recent Commits per Repo"
-        description="Top repositories by available last-year commit activity."
+        title="Commits (52w) per Repo"
+        description="Available 52-week activity for the sampled repositories."
         data={analytics.commitsPerRepoChart}
         dataKey="value"
         nameKey="name"
@@ -105,7 +103,10 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
       <article className="chart-card chart-card-wide">
         <div className="panel-head">
           <span className="section-label">Commits per Month</span>
-          <p>Last 12 full months through the previous month, aggregated from top starred repositories.</p>
+          <p>
+            Twelve-month trend through the previous month. The earliest month
+            can be partial because GitHub exposes 52 weeks.
+          </p>
         </div>
         <div className="chart-wrap chart-wrap-line">
           <ResponsiveContainer width="100%" height="100%">
@@ -137,33 +138,19 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
       <article className="chart-card summary-card">
         <div className="panel-head">
           <span className="section-label">Summary metrics</span>
-          <p>A quick quantitative snapshot of the profile.</p>
+          <p>Exact repository totals and commit-analysis coverage.</p>
         </div>
-        <div className="chart-wrap">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={analytics.summaryMetrics}
-              layout="vertical"
-              margin={{ top: 8, right: 12, left: 18, bottom: 8 }}
-            >
-              <CartesianGrid stroke={summaryGridColor} horizontal={false} />
-              <XAxis type="number" tickLine={false} axisLine={false} stroke={axisColor} />
-              <YAxis
-                type="category"
-                dataKey="label"
-                tickLine={false}
-                axisLine={false}
-                width={88}
-                stroke={axisColor}
-              />
-              <Tooltip
-                formatter={(value: number) => [formatNumber(value), 'Value']}
-                contentStyle={tooltipStyle}
-                itemStyle={tooltipItemStyle}
-              />
-              <Bar dataKey="value" fill={secondaryBarColor} radius={[0, 10, 10, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="summary-metrics-grid">
+          {analytics.summaryMetrics.map((metric) => (
+            <div className="summary-metric" key={metric.label}>
+              <span>{metric.label}</span>
+              <strong>
+                {metric.format === 'decimal'
+                  ? formatDecimal(metric.value)
+                  : formatNumber(metric.value)}
+              </strong>
+            </div>
+          ))}
         </div>
       </article>
     </section>

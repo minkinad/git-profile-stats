@@ -128,12 +128,15 @@ export function RepoList({ analytics }: RepoListProps) {
                     />
                     {repo.language}
                   </span>
+                  {repo.isFork ? <span className="repo-badge">Fork</span> : null}
+                  {repo.isArchived ? <span className="repo-badge">Archived</span> : null}
                 </div>
                 <p>{repo.description ?? 'No repository description provided.'}</p>
               </div>
               <div className="repo-stats">
                 <span>Stars {formatNumber(repo.stars)}</span>
                 <span>Forks {formatNumber(repo.forks)}</span>
+                <span>Issues {formatNumber(repo.openIssues)}</span>
                 <span>Updated {formatDate(repo.updatedAt)}</span>
               </div>
             </article>

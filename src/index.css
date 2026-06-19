@@ -847,6 +847,37 @@ select {
   height: 22rem;
 }
 
+.summary-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 1px;
+  margin-top: 1rem;
+  padding: 1px;
+  background: var(--line-soft);
+}
+
+.summary-metric {
+  min-width: 0;
+  padding: 1rem 1.1rem;
+  background: var(--panel-bg);
+}
+
+.summary-metric span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.summary-metric strong {
+  display: block;
+  margin-top: 0.3rem;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-size: clamp(1.28rem, 2vw, 1.8rem);
+  line-height: 1.08;
+  font-weight: 750;
+}
+
 .chart-empty {
   display: flex;
   align-items: center;
@@ -934,6 +965,14 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+}
+
+.repo-heading .repo-badge {
+  padding: 0.18rem 0.5rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  font-size: 0.76rem;
+  line-height: 1.2;
 }
 
 .repo-language-dot {
@@ -1128,6 +1167,14 @@ select {
 
   .chart-wrap.chart-wrap-pie {
     height: 18rem;
+  }
+
+  .summary-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-metric {
+    padding: 0.95rem 0.25rem;
   }
 
   .stats-grid {
