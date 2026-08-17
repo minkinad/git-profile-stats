@@ -16,6 +16,8 @@ import { SearchForm } from './components/SearchForm';
 import { StatsGrid } from './components/StatsGrid';
 import { analyzeGitHubUser, GitHubApiError } from './services/githubApi';
 import { GitHubAnalysisResult } from './types/github';
+import { normalizeGitHubUsernameInput } from './utils/githubUsername';
+import { AppRoute, getProfileHash, parseAppRoute } from './utils/hashRoute';
 
 const ChartsSection = lazy(() =>
   import('./components/ChartsSection').then((module) => ({
@@ -25,12 +27,6 @@ const ChartsSection = lazy(() =>
 
 const initialMessage =
   'Search for a public GitHub username to see profile data, repository insights, and language analytics.';
-const profileRoutePrefix = '#/user/';
-
-type AppRoute =
-  | { page: 'home' }
-  | { page: 'profile'; username: string };
-
 type ThemeMode = 'light' | 'dark';
 
 interface ThemeWaveState {
@@ -40,24 +36,7 @@ interface ThemeWaveState {
 }
 
 function getCurrentRoute(): AppRoute {
-  const hash = window.location.hash;
-
-  if (hash.startsWith(profileRoutePrefix)) {
-    const username = decodeURIComponent(hash.slice(profileRoutePrefix.length)).trim();
-
-    if (username) {
-      return {
-        page: 'profile',
-        username,
-      };
-    }
-  }
-
-  return { page: 'home' };
-}
-
-function getProfileHash(username: string): string {
-  return `${profileRoutePrefix}${encodeURIComponent(username.trim())}`;
+  return parseAppRoute(window.location.hash);
 }
 
 function getErrorMessage(error: unknown): string {
@@ -81,32 +60,6 @@ function getErrorMessage(error: unknown): string {
   }
 
   return 'Something unexpected happened while analyzing this profile.';
-}
-
-function normalizeUsernameInput(value: string): string {
-  const trimmed = value.trim();
-
-  if (!trimmed) {
-    return '';
-  }
-
-  const withoutAtSign = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
-
-  try {
-    const url = new URL(
-      withoutAtSign.startsWith('github.com/')
-        ? `https://${withoutAtSign}`
-        : withoutAtSign,
-    );
-
-    if (url.hostname === 'github.com' || url.hostname === 'www.github.com') {
-      return url.pathname.split('/').filter(Boolean)[0] ?? '';
-    }
-  } catch {
-    // Plain usernames are expected to fall through.
-  }
-
-  return withoutAtSign;
 }
 
 export default function App() {
@@ -226,7 +179,7 @@ export default function App() {
   }, [route]);
 
   function handleAnalyze() {
-    const trimmedUsername = normalizeUsernameInput(username);
+    const trimmedUsername = normalizeGitHubUsernameInput(username);
 
     if (!trimmedUsername) {
       setErrorMessage('Enter a GitHub username to begin.');
@@ -251,6 +204,12 @@ export default function App() {
     }
 
     const nextTheme: ThemeMode = theme === 'light' ? 'dark' : 'light';
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setTheme(nextTheme);
+      return;
+    }
+
     const rect = event.currentTarget.getBoundingClientRect();
 
     if (themeWaveTimeoutRef.current) {
@@ -305,14 +264,14 @@ export default function App() {
             />
 
             {errorMessage ? (
-              <section className="status-panel">
+              <section className="status-panel" role="alert">
                 <span className="section-label">Status</span>
                 <div className="error-message">{errorMessage}</div>
               </section>
             ) : (
               <section className="status-panel status-panel-muted">
                 <span className="section-label">Status</span>
-                <p>{statusMessage}</p>
+                <p role="status">{statusMessage}</p>
               </section>
             )}
           </>
@@ -335,7 +294,11 @@ export default function App() {
             </section>
 
             {isLoading ? (
-              <section className="loading-grid" aria-live="polite">
+              <section
+                className="loading-grid"
+                aria-live="polite"
+                aria-label="Loading GitHub profile analytics"
+              >
                 <div className="panel skeleton tall" />
                 <div className="panel skeleton" />
                 <div className="panel skeleton" />
@@ -343,7 +306,7 @@ export default function App() {
             ) : null}
 
             {errorMessage && !isLoading ? (
-              <section className="status-panel">
+              <section className="status-panel" role="alert">
                 <span className="section-label">Status</span>
                 <div className="error-message">{errorMessage}</div>
               </section>
@@ -362,7 +325,7 @@ export default function App() {
                 >
                   <ChartsSection analytics={analysis.analytics} theme={theme} />
                 </Suspense>
-                <RepoList analytics={analysis.analytics} />
+                <RepoList key={analysis.user.login} analytics={analysis.analytics} />
               </div>
             ) : null}
           </>

@@ -25,7 +25,7 @@ export function SearchForm({
   }
 
   return (
-    <form className="search-form" onSubmit={handleSubmit}>
+    <form className="search-form" onSubmit={handleSubmit} aria-busy={isLoading}>
       <label className="search-label" htmlFor={inputId}>
         {label}
       </label>
@@ -37,6 +37,7 @@ export function SearchForm({
           autoComplete="off"
           autoCapitalize="none"
           spellCheck={false}
+          disabled={isLoading}
           placeholder="e.g. torvalds"
           value={username}
           onChange={(event) => onUsernameChange(event.target.value)}

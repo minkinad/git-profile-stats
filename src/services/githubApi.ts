@@ -6,6 +6,7 @@ import {
   GitHubUser,
   MonthlyCommitPoint,
 } from '../types/github';
+import { isValidGitHubUsername } from '../utils/githubUsername';
 
 const API_BASE_URL = 'https://api.github.com';
 const apiToken = import.meta.env.VITE_GITHUB_TOKEN;
@@ -13,7 +14,6 @@ const ANALYSIS_CACHE_PREFIX = 'gitProfileStats-analysis:';
 const ANALYSIS_CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_REPOS_FOR_DEEP_ANALYTICS = 8;
 const MAX_PARALLEL_REQUESTS = 4;
-const GITHUB_USERNAME_PATTERN = /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i;
 
 export class GitHubApiError extends Error {
   code: GitHubApiErrorCode;
@@ -48,6 +48,27 @@ function buildHeaders(): Record<string, string> {
 
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError';
+}
+
+function abortableDelay(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('The operation was aborted.', 'AbortError'));
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      signal?.removeEventListener('abort', handleAbort);
+      resolve();
+    }, milliseconds);
+
+    function handleAbort() {
+      window.clearTimeout(timeoutId);
+      reject(new DOMException('The operation was aborted.', 'AbortError'));
+    }
+
+    signal?.addEventListener('abort', handleAbort, { once: true });
+  });
 }
 
 function getCacheKey(username: string): string {
@@ -280,7 +301,7 @@ async function fetchRepoCommitActivity(
       return [];
     }
 
-    await new Promise((resolve) => window.setTimeout(resolve, 700));
+    await abortableDelay(700, signal);
     return fetchRepoCommitActivity(username, repoName, signal, attempt + 1);
   }
 
@@ -396,7 +417,7 @@ export async function analyzeGitHubUser(
     );
   }
 
-  if (!GITHUB_USERNAME_PATTERN.test(username)) {
+  if (!isValidGitHubUsername(username)) {
     throw new GitHubApiError(
       'Please enter a valid GitHub username.',
       'invalid_input',

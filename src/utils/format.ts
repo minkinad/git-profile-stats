@@ -18,15 +18,24 @@ export function formatDate(value: string): string {
 }
 
 export function formatExternalLink(value: string | null): string | null {
-  if (!value) {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
     return null;
   }
 
-  if (value.startsWith('http://') || value.startsWith('https://')) {
-    return value;
-  }
+  const candidate = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed.replace(/^\/{2}/, '')}`;
 
-  return `https://${value}`;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === 'http:' || url.protocol === 'https:'
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export function downloadJSON(data: unknown, filename: string): void {
@@ -40,4 +49,3 @@ export function downloadJSON(data: unknown, filename: string): void {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
