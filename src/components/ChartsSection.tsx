@@ -16,6 +16,11 @@ import { GitHubAnalytics } from '../types/github';
 import { getGitHubStyleColor } from '../utils/githubColors';
 import { formatNumber } from '../utils/format';
 
+function formatChartValue(value: unknown): string {
+  const numericValue = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numericValue) ? formatNumber(numericValue) : String(value ?? '');
+}
+
 interface ChartsSectionProps {
   analytics: GitHubAnalytics;
   theme: 'light' | 'dark';
@@ -117,7 +122,7 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
               <XAxis dataKey="month" tickLine={false} axisLine={false} stroke={axisColor} />
               <YAxis tickLine={false} axisLine={false} stroke={axisColor} />
               <Tooltip
-                formatter={(value: number) => [formatNumber(value), 'Commits']}
+                formatter={(value) => [formatChartValue(value), 'Commits']}
                 contentStyle={tooltipStyle}
                 itemStyle={tooltipItemStyle}
               />
@@ -157,7 +162,7 @@ export function ChartsSection({ analytics, theme }: ChartsSectionProps) {
                 stroke={axisColor}
               />
               <Tooltip
-                formatter={(value: number) => [formatNumber(value), 'Value']}
+                formatter={(value) => [formatChartValue(value), 'Value']}
                 contentStyle={tooltipStyle}
                 itemStyle={tooltipItemStyle}
               />
@@ -241,7 +246,7 @@ function PieChartCard<T extends MetricChartDatum>({
                   : null}
               </Pie>
               <Tooltip
-                formatter={(value: number) => formatNumber(value)}
+                formatter={(value) => formatChartValue(value)}
                 contentStyle={tooltipStyle}
                 itemStyle={tooltipItemStyle}
               />
@@ -320,7 +325,7 @@ function MetricChartCard<T extends MetricChartDatum>({
                 stroke={axisColor}
               />
               <Tooltip
-                formatter={(value: number) => [formatNumber(value), valueLabel]}
+                formatter={(value) => [formatChartValue(value), valueLabel]}
                 contentStyle={tooltipStyle}
                 itemStyle={tooltipItemStyle}
               />
