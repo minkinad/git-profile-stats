@@ -2,8 +2,8 @@
 
 ![React](https://img.shields.io/badge/React-18-111111?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-111111?logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5-111111?logo=vite&logoColor=white)
-![Recharts](https://img.shields.io/badge/Recharts-Analytics-111111?logo=chartdotjs&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-111111?logo=vite&logoColor=white)
+![Recharts](https://img.shields.io/badge/Recharts-3-111111?logo=chartdotjs&logoColor=white)
 ![GitHub Pages](https://img.shields.io/badge/Deploy-GitHub%20Pages-111111?logo=githubpages&logoColor=white)
 
 gitProfileStats is a minimalist GitHub analytics dashboard built with React, TypeScript, and Vite. Enter any public GitHub username to view profile details, repository insights, language distribution, top repositories by stars, and summary metrics in a clean monochrome interface.
@@ -27,6 +27,7 @@ The design stays intentionally black, white, and grayscale for a premium product
 - TypeScript
 - Vite
 - Recharts
+- Vitest
 - GitHub REST API
 - GitHub Pages
 
@@ -82,10 +83,10 @@ The design stays intentionally black, white, and grayscale for a premium product
 
 ## Local Setup
 
-1. Install dependencies:
+1. Use Node.js 20.19 or newer and install dependencies:
 
    ```bash
-   npm install
+   npm ci
    ```
 
 2. Start the development server:
@@ -123,7 +124,7 @@ gitProfileStats includes two deployment paths:
 2. Install dependencies:
 
    ```bash
-   npm install
+   npm ci
    ```
 
 3. Deploy:
@@ -162,6 +163,8 @@ This environment variable is optional and is only used client-side at build/runt
 
 - `npm run dev` - start the local development server
 - `npm run build` - create the production build
+- `npm test` - run the automated test suite
+- `npm run check` - run tests and create a production build
 - `npm run preview` - preview the production build
 - `npm run deploy` - build and publish to GitHub Pages using `gh-pages`
 
