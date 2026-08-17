@@ -1,4 +1,4 @@
-name: Deploy GitScope
+name: Deploy
 
 on:
   push:
